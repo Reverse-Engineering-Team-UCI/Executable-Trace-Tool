@@ -1,4 +1,5 @@
 import immlib
+from collections import defaultdict
  
 DESC = "CS 199 by Derek Fisher and Yu-Jye Tung"
  
@@ -40,6 +41,7 @@ def main(args):
     #Initialization
     rawFile = open('data.txt', 'w')
     processedFile = open('result.txt', 'w')
+    statsFile = open('stats.txt', 'w')
     tempVal = 0 #Variables for writing to processedFile
     oldValue = ""
     boolean = ""
@@ -135,6 +137,7 @@ def main(args):
     rawFile.close()
 
     rawFile = open('data.txt', 'r')
+    stats = defaultdict(list)
     #Populating the processedFile
     line = rawFile.read()
     for word in line.split():
@@ -152,6 +155,16 @@ def main(args):
             if(notLoop and oldValue not in loopAddr):
                 processedFile.write(hex(long(oldValue))+":"+boolean+" ")
                 processedFile.write("\n")
+                if(len(stats[oldValue])==0): #If this is the first time the address is added to the dictionary
+                    stats[oldValue].append(0)
+                    stats[oldValue].append(0)
+                #How many time a conditional statement is true and how many time it is false is stored in a dictionary.
+                #Key is the address and the value is a list with two element. The first element is how many times it is
+                #true and the second element is how many times it is false. 
+                if(boolean == "true"):
+                    stats[oldValue][0]+=1
+                elif(boolean == "false"):
+                    stats[oldValue][1]+=1
             else:
                 #If the loop is true it jumps away and if the loop is false it goes to the next line
                 #Since it is opposite of regular conditional statements, we just flip the boolean value
@@ -160,10 +173,35 @@ def main(args):
                     processedFile.write("\n")
                 else:
                     processedFile.write(hex(long(oldValue))+":true ")
-                    processedFile.write("\n")       
+                    processedFile.write("\n")
+                if(len(stats[oldValue])==0): #If this is the first time the address is added to the dictionary
+                    stats[oldValue].append(0)
+                    stats[oldValue].append(0)
+                if(boolean == "false"):
+                    stats[oldValue][0]+=1
+                elif(boolean == "true"):
+                    stats[oldValue][1]+=1     
         notLoop = True
         tempVal+=1
+    #The header for the stats file
+    statsFile.write("Breakpoint Address")
+    statsFile.write("\t")
+    statsFile.write("Percent True")
+    statsFile.write("\t")
+    statsFile.write("Percent False")
+    statsFile.write("\n")
+    for key in stats:
+        statsFile.write(hex(long(key))) #Address
+        statsFile.write("\t\t")
+        trueP = str((float(stats[key][0])/(stats[key][0]+stats[key][1]))*100)
+        statsFile.write(trueP.split(".")[0]+"."+trueP.split(".")[1][0]) #Percentage of times it is true
+        statsFile.write("\t\t")
+        falseP = str((float(stats[key][1])/(stats[key][0]+stats[key][1]))*100)
+        statsFile.write(falseP.split(".")[0]+"."+falseP.split(".")[1][0])#Percentage of times it is false
+        statsFile.write("\n")
+    #Close all files
     rawFile.close()
     processedFile.close()
-        
+    statsFile.close()
+  
     return "Finished"
