@@ -8,7 +8,7 @@ Tools
 
 Setup
 -----
-+   Test
+Download our analysis.py script and put it inside the PyCommands folder.
 
 Instruction
 -----------
