@@ -40,35 +40,15 @@ def findEndPoint(address):
     return address
 
 
-
-class Stack:
-     def __init__(self):
-         self.items = []
-
-     def isEmpty(self):
-         return self.items == []
-
-     def push(self, item):
-         self.items.append(item)
-
-     def pop(self):
-         return self.items.pop()
-
-     def peek(self):
-         return self.items[len(self.items)-1]
-
-     def size(self):
-         return len(self.items)
-
-
 def main(args):
     imm = immlib.Debugger()
 ##    1.) use module.getEntry() to start at the beginning of the executable
 ##    2.) iterate through each instruction until we find a function call in the format "call program.00401180". This is the "pre-main"
 ##    3.) now we will iterate through every line of the "pre-main" until we find cexit. The call to main is always exactlty 7 bytes
 ##        before the call to cexit, so it is located at the address of cexit - 7
-##    4.) jump to main and iterate though it making breakpoints at each jump until we reach a "leave", which means main has ended.
-##        is at.
+##    4.) jump to main and decrease address until find the startpoint of user code.
+##    5.) increase the address and find all branch instruction. if find it, set the breakpoint
+##    6.) when address pointed 'NOP', stop searching
     
 ##      Key Assumptions:
 ##       
