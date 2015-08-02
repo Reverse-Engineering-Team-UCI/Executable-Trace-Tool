@@ -2,7 +2,6 @@ import immlib
 from collections import defaultdict
 
 imm = immlib.Debugger()
-DESC = "CS 199 by Derek Fisher and Yu-Jye Tung"
  
 # if a process has spaces, capital letters, or is over 8 characters long it needs to be modified
 # for example, the process "Hello World.exe" appears as "hello_wo" in the assembly code
