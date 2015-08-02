@@ -1,10 +1,38 @@
 import immlib
 from collections import defaultdict
- 
+
+imm = immlib.Debugger()
 DESC = "CS 199 by Derek Fisher and Yu-Jye Tung"
  
 # if a process has spaces, capital letters, or is over 8 characters long it needs to be modified
 # for example, the process "Hello World.exe" appears as "hello_wo" in the assembly code
+
+def logJmpsOfFunction(address):
+    while(1):
+        opcode = imm.disasm(address) # we get the numeric code for the instruction we are currently on (e.g. 2342342)
+        opcode_str = opcode.getDisasm()  # we get the string representation of the instruction we are currently on (e.g. jmp esp)
+        module = imm.findModule(address)[0].lower()
+        if opcode_str[0] == "J":
+            if opcode_str[0:3] != "JMP":
+                imm.setBreakpoint(address)
+                imm.log(" - " + "%-35s" % opcode_str, address=address) #address is the address of the jump
+        elif "leave" in opcode_str.lower() or "retn" in opcode_str.lower():
+            imm.log(" - exiting function")
+            #imm.log("       current address = " + hex(address) + " our call to main address =" + hex(address-7))
+            #imm.log("%10s" % hex(address).upper() + "   " + "%-35s" % opcode_str + "%10s" % module)
+            break
+        # recursively check for functions within this function
+        if (formattedCall(module)) in opcode_str.lower():
+            function_hex_address = opcode_str.split(".")[1]
+            function_address = int(function_hex_address, 16)
+            imm.log("function: " + opcode_str + " located at: " + hex(function_address).upper())
+            imm.updateLog()
+            logJmpsOfFunction(function_address)
+        else:
+            None
+            #imm.log("%10s" % hex(address).upper() + "   " + "%-35s" % opcode_str + "%10s" % module)
+        address += opcode.getOpSize()
+
 def formattedCall(module_name):
     ''' takes Hello_World.exe and returns call hello_wo '''
     module_name = module_name.split(".")[0]
@@ -13,21 +41,20 @@ def formattedCall(module_name):
         module_name = module_name[0:8]
     module_name = module_name.lower()
     return "call " + module_name
-     
- 
+    
+
 def usage(imm):
     imm.log("!search <ASM>")
     imm.log("For example: !search pop r32\\npop r32\\nret")
- 
+
 def main(args):
-    imm = immlib.Debugger()
 ##    1.) use module.getEntry() to start at the beginning of the executable
 ##    2.) iterate through each instruction until we find a function call in the format "call program.00401180". This is the "pre-main"
 ##    3.) now we will iterate through every line of the "pre-main" until we find cexit. The call to main is always exactlty 7 bytes
 ##        before the call to cexit, so it is located at the address of cexit - 7
 ##    4.) jump to main and iterate though it making breakpoints at each jump until we reach a "leave", which means main has ended.
 ##        is at.
-     
+    
 ##      Key Assumptions:
 ##       
 ##       the call to main is underneath Immunity's automatic breakpoint
@@ -38,24 +65,15 @@ def main(args):
 ##       cexit is always called at the end of pre-main. (I use cexit to end my loop that goes through main)
 ##       the call to the program's main is always 7 bytes before the call to cexit in the pre-main
 
-    #Initialization
-    rawFile = open('data.txt', 'w')
-    processedFile = open('result.txt', 'w')
-    statsFile = open('stats.txt', 'w')
-    tempVal = 0 #Variables for writing to processedFile
-    oldValue = ""
-    boolean = ""
-    notLoop = True
-    loopAddr = []
     # this code block finds the last address in the entire executable. We use it in our while loop to make sure we don't run off the end of the program
     name=imm.getDebuggedName()
     module=imm.getModule(name)
     address=module.getEntry()
     mod_size=module.getCodesize()
     last_address = address+mod_size
- 
+
     x = 0
-     
+    
     imm.log("Starting search for call to main...")
     imm.updateLog()
     while(address < last_address): # we will loop forever (until the end of the executable) until we find the instruction "call X.Y", where X is the name of our process and Y is the address which the call jumps to. (e.g. call proj4.00401180)
@@ -65,7 +83,7 @@ def main(args):
         module = imm.findModule(address)[0].lower() # the module name is the name of the process we are debugging (e.g. proj4.exe)
         #imm.log(opcode_str + " in module: " + module, address=address)
         imm.updateLog()
- 
+
         # check to see if the line we are on is the call to main
         #imm.log(formattedCall(module))
         #imm.log(opcode_str)
@@ -78,10 +96,10 @@ def main(args):
             break
         else:
             address += opcode.getOpSize() #otherwise increment the address by one instruction (we can use getOpSize() to calculate how much incrementing by one instruction actually is)
-        x += 1   
-             
+        x += 1    
+            
     i = 0
-     
+    
     while(address < last_address):
         opcode = imm.disasm(address) # we get the numeric code for the instruction we are currently on (e.g. 2342342)
         opcode_str = opcode.getDisasm()  # we get the string representation of the instruction we are currently on (e.g. jmp esp)
@@ -93,18 +111,25 @@ def main(args):
             address = int(imm.disasm(address).getDisasm().split(".")[1], 16)
             imm.log("The address of main is located at: " + hex(address))
             break
- 
-             
+
+            
         address += opcode.getOpSize()
         i += 1
- 
+
     # Step 3: starting from main, iterate through instructions, logging it if it is a jump. The loop ends when "cexit is called"
- 
- 
+
+
     while(address < last_address):
         opcode = imm.disasm(address) # we get the numeric code for the instruction we are currently on (e.g. 2342342)
         opcode_str = opcode.getDisasm()  # we get the string representation of the instruction we are currently on (e.g. jmp esp)
         module = imm.findModule(address)[0].lower()
+        #imm.log("<=> " + opcode_str.lower() + " " + formattedCall(module))
+        if (formattedCall(module)) in opcode_str.lower():
+            function_hex_address = opcode_str.split(".")[1]
+            function_address = int(function_hex_address, 16)
+            imm.log("function: " + opcode_str + " located at: " + hex(function_address).upper())
+            imm.updateLog()
+            logJmpsOfFunction(function_address)
         if opcode_str[0] == "J":
             if opcode_str[0:3] != "JMP":
                 imm.setBreakpoint(address)
@@ -117,7 +142,7 @@ def main(args):
         else:
             None
             #imm.log("%10s" % hex(address).upper() + "   " + "%-35s" % opcode_str + "%10s" % module)
-             
+            
         address += opcode.getOpSize()
         i += 1
  
