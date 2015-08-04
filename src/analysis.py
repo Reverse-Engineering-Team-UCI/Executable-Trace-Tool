@@ -64,6 +64,15 @@ def main(args):
 ##       cexit is always called at the end of pre-main. (I use cexit to end my loop that goes through main)
 ##       the call to the program's main is always 7 bytes before the call to cexit in the pre-main
 
+    #Initialization
+    rawFile = open('data.txt', 'w')
+    processedFile = open('result.txt', 'w')
+    statsFile = open('stats.txt', 'w')
+    tempVal = 0 #Variables for writing to processedFile
+    oldValue = ""
+    boolean = ""
+    notLoop = True
+    loopAddr = []
     # this code block finds the last address in the entire executable. We use it in our while loop to make sure we don't run off the end of the program
     name=imm.getDebuggedName()
     module=imm.getModule(name)
