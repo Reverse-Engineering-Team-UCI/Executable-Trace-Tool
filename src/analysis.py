@@ -6,6 +6,67 @@ imm = immlib.Debugger()
 # if a process has spaces, capital letters, or is over 8 characters long it needs to be modified
 # for example, the process "Hello World.exe" appears as "hello_wo" in the assembly code
 
+def getRawData(imm,rawFile):
+    '''RawFile will contain addresses of all jcc statements and addresses of where each jcc statement jumps to'''
+    while(True): 
+        imm.run() #Run the code until a breakpoint is hit
+        regs = imm.getRegs()
+        if len(regs)==0: #When reach the end, can't read register value anymore
+            break
+        rawFile.write(str(regs['EIP'])+" ")
+        imm.stepOver()
+        regs = imm.getRegs() #Get the reg values at the new address
+        rawFile.write(str(regs['EIP'])+" ")
+
+def initStatsKey(stats, oldValue):
+    '''Value of the address that is added to the stats dictionary is a list. The list needs to be initialized
+    so that it contains two int that is zero'''
+    stats[oldValue].append(0)
+    stats[oldValue].append(0)
+
+def addrBoolValue(processedFile, oldValue, boolean, stats, notLoop, loopAddr):
+    '''Write to the processedFile whether a jcc address is True or False'''
+    #If the loop is true it jumps away and if the loop is false it goes to the next line
+    #Since it is opposite of regular conditional statements, we just flip the boolean value
+    if(not(notLoop and oldValue not in loopAddr)):
+        if(boolean == "true"):
+            boolean = "false"
+        else:
+            boolean = "true"
+    processedFile.write(hex(long(oldValue))+":"+boolean+" ")
+    processedFile.write("\n")
+    #If this is the first time the address is added to the dictionary
+    initStatsKey(stats, oldValue)
+    #How many time a conditional statement is true and how many time it is false is stored in a dictionary.
+    #Key is the address and the value is a list with two element. The first element is how many times it is
+    #true and the second element is how many times it is false. 
+    if(boolean == "true"):
+        stats[oldValue][0]+=1
+    elif(boolean == "false"):
+        stats[oldValue][1]+=1
+    
+def statsForAddr(statsFile, stats, key):
+    '''Write to the file the statistic for a particular address'''
+    #stats is a dictionary. Key: address. Value: a list with two element. First element contains amount of
+    #time it is true. Second element contains amount of time it is false.
+    statsFile.write(hex(long(key))) #Address
+    statsFile.write("\t\t")
+    trueP = str((float(stats[key][0])/(stats[key][0]+stats[key][1]))*100)
+    statsFile.write(trueP.split(".")[0]+"."+trueP.split(".")[1][0]) #Percentage of times it is true
+    statsFile.write("\t\t")
+    falseP = str((float(stats[key][1])/(stats[key][0]+stats[key][1]))*100)
+    statsFile.write(falseP.split(".")[0]+"."+falseP.split(".")[1][0])#Percentage of times it is false
+    statsFile.write("\n")
+
+def writeStatsHeader(statsFile):
+    '''The header for the file statsFile'''
+    statsFile.write("Breakpoint Address")
+    statsFile.write("\t")
+    statsFile.write("Percent True")
+    statsFile.write("\t")
+    statsFile.write("Percent False")
+    statsFile.write("\n")
+        
 def logJmpsOfFunction(address):
     while(1):
         opcode = imm.disasm(address) # we get the numeric code for the instruction we are currently on (e.g. 2342342)
@@ -73,6 +134,7 @@ def main(args):
     boolean = ""
     notLoop = True
     loopAddr = []
+    stats = defaultdict(list)
     # this code block finds the last address in the entire executable. We use it in our while loop to make sure we don't run off the end of the program
     name=imm.getDebuggedName()
     module=imm.getModule(name)
@@ -158,19 +220,10 @@ def main(args):
     imm.run() #Get to the start of program
 
     #Populating the rawFile
-    while(True): 
-        imm.run() #Run the code until a breakpoint is hit
-        regs = imm.getRegs()
-        if len(regs)==0: #When reach the end, can't read register value anymore
-            break
-        rawFile.write(str(regs['EIP'])+" ")
-        imm.stepOver()
-        regs = imm.getRegs() #Get the reg values at the new address
-        rawFile.write(str(regs['EIP'])+" ")
+    getRawData(imm, rawFile)
     rawFile.close()
 
     rawFile = open('data.txt', 'r')
-    stats = defaultdict(list)
     #Populating the processedFile
     line = rawFile.read()
     for word in line.split():
@@ -185,53 +238,15 @@ def main(args):
                 loopAddr.append(oldValue)
             else: #Go to next instruction
                 boolean = "true"
-            if(notLoop and oldValue not in loopAddr):
-                processedFile.write(hex(long(oldValue))+":"+boolean+" ")
-                processedFile.write("\n")
-                if(len(stats[oldValue])==0): #If this is the first time the address is added to the dictionary
-                    stats[oldValue].append(0)
-                    stats[oldValue].append(0)
-                #How many time a conditional statement is true and how many time it is false is stored in a dictionary.
-                #Key is the address and the value is a list with two element. The first element is how many times it is
-                #true and the second element is how many times it is false. 
-                if(boolean == "true"):
-                    stats[oldValue][0]+=1
-                elif(boolean == "false"):
-                    stats[oldValue][1]+=1
-            else:
-                #If the loop is true it jumps away and if the loop is false it goes to the next line
-                #Since it is opposite of regular conditional statements, we just flip the boolean value
-                if(boolean == "true"):
-                    processedFile.write(hex(long(oldValue))+":false ")
-                    processedFile.write("\n")
-                else:
-                    processedFile.write(hex(long(oldValue))+":true ")
-                    processedFile.write("\n")
-                if(len(stats[oldValue])==0): #If this is the first time the address is added to the dictionary
-                    stats[oldValue].append(0)
-                    stats[oldValue].append(0)
-                if(boolean == "false"):
-                    stats[oldValue][0]+=1
-                elif(boolean == "true"):
-                    stats[oldValue][1]+=1     
+            #Write to the processedFile whether the jcc address(oldValue) is true or false 
+            addrBoolValue(processedFile, oldValue, boolean, stats, notLoop, loopAddr)
+        #prepare for the next loop
         notLoop = True
         tempVal+=1
-    #The header for the stats file
-    statsFile.write("Breakpoint Address")
-    statsFile.write("\t")
-    statsFile.write("Percent True")
-    statsFile.write("\t")
-    statsFile.write("Percent False")
-    statsFile.write("\n")
+    #Write to the statsFile
+    writeStatsHeader(statsFile)
     for key in stats:
-        statsFile.write(hex(long(key))) #Address
-        statsFile.write("\t\t")
-        trueP = str((float(stats[key][0])/(stats[key][0]+stats[key][1]))*100)
-        statsFile.write(trueP.split(".")[0]+"."+trueP.split(".")[1][0]) #Percentage of times it is true
-        statsFile.write("\t\t")
-        falseP = str((float(stats[key][1])/(stats[key][0]+stats[key][1]))*100)
-        statsFile.write(falseP.split(".")[0]+"."+falseP.split(".")[1][0])#Percentage of times it is false
-        statsFile.write("\n")
+        statsForAddr(statsFile, stats, key)
     #Close all files
     rawFile.close()
     processedFile.close()
