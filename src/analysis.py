@@ -129,6 +129,7 @@ def main(args):
     rawFile = open('data.txt', 'w')
     processedFile = open('result.txt', 'w')
     statsFile = open('stats.txt', 'w')
+    files = [rawFile, processedFile, statsFile]
     tempVal = 0 #Variables for writing to processedFile
     oldValue = ""
     boolean = ""
@@ -248,8 +249,7 @@ def main(args):
     for key in stats:
         statsForAddr(statsFile, stats, key)
     #Close all files
-    rawFile.close()
-    processedFile.close()
-    statsFile.close()
+    for f in files:
+        f.close()
   
-    return "Finished"
+    return "[*] Finished"
