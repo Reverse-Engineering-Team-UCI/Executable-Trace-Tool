@@ -4,7 +4,7 @@ Determine the area of code that are associated with specific feature in a progra
 Tools
 -----
 +   Immunity Debugger 
-+   Python 2
++   Python 2.x
 
 Setup
 -----
