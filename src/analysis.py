@@ -29,20 +29,17 @@ def addrBoolValue(processedFile, oldValue, boolean, stats, notLoop, loopAddr):
     #If the loop is true it jumps away and if the loop is false it goes to the next line
     #Since it is opposite of regular conditional statements, we just flip the boolean value
     if(not(notLoop and oldValue not in loopAddr)):
-        if(boolean == "true"):
-            boolean = "false"
-        else:
-            boolean = "true"
-    processedFile.write(hex(long(oldValue))+":"+boolean+" ")
+        boolean = not boolean
+    processedFile.write(hex(long(oldValue))+":"+str(boolean)+" ")
     processedFile.write("\n")
     #If this is the first time the address is added to the dictionary
     initStatsKey(stats, oldValue)
     #How many time a conditional statement is true and how many time it is false is stored in a dictionary.
     #Key is the address and the value is a list with two element. The first element is how many times it is
     #true and the second element is how many times it is false. 
-    if(boolean == "true"):
+    if(boolean):
         stats[oldValue][0]+=1
-    elif(boolean == "false"):
+    else:
         stats[oldValue][1]+=1
     
 def statsForAddr(statsFile, stats, key):
@@ -132,7 +129,7 @@ def main(args):
     files = [rawFile, processedFile, statsFile]
     tempVal = 0 #Variables for writing to processedFile
     oldValue = ""
-    boolean = ""
+    boolean = True
     notLoop = True
     loopAddr = []
     stats = defaultdict(list)
@@ -232,13 +229,13 @@ def main(args):
             oldValue = word
         else: #One stepover from where I break at
             if (long(word)-long(oldValue))>5: #branches away. Word is new EIP value and oldValue is the previous EIP value
-                boolean = "false"
+                boolean = False
             elif (long(word)-long(oldValue)<0): #Loops alway jmp backward
                 notLoop = False
-                boolean = "false"
+                boolean = False
                 loopAddr.append(oldValue)
             else: #Go to next instruction
-                boolean = "true"
+                boolean = True
             #Write to the processedFile whether the jcc address(oldValue) is true or false 
             addrBoolValue(processedFile, oldValue, boolean, stats, notLoop, loopAddr)
         #prepare for the next loop
