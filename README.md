@@ -5,6 +5,7 @@ Tools
 -----
 +   Immunity Debugger 
 +   Python 2.x
++   Brain
 
 Setup
 -----

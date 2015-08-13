@@ -20,7 +20,7 @@ def getRawData(imm,rawFile):
 
 def initStatsKey(stats, oldValue):
     '''Value of the address that is added to the stats dictionary is a list. The list needs to be initialized
-    so that it contains two int that is zero'''
+    so that it contains two int  that is zero'''
     stats[oldValue].append(0)
     stats[oldValue].append(0)
 
