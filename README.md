@@ -8,7 +8,7 @@ Tools
 
 Setup
 -----
-Download our analysis.py script and put it inside the PyCommands folder.
+Download our analysis.py script and put it inside the PyCommands folder. The PyCommands folder is inside the Immunity Folder.
 
 Instruction
 -----------
