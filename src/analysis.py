@@ -77,15 +77,12 @@ def logJmpsOfFunction(address):
                 imm.log(" - " + "%-35s" % opcode_str, address=address) #address is the address of the jump
         elif "leave" in opcode_str.lower() or "retn" in opcode_str.lower():
             imm.log(" - exiting function")
-            #imm.log("       current address = " + hex(address) + " our call to main address =" + hex(address-7))
-            #imm.log("%10s" % hex(address).upper() + "   " + "%-35s" % opcode_str + "%10s" % module)
             break
-        # recursively check for functions within this function
+        # recursively check for calls to other functions within this function
         if (formattedCall(module)) in opcode_str.lower():
             function_hex_address = opcode_str.split(".")[1]
             function_address = int(function_hex_address, 16)
             imm.log("function: " + opcode_str + " located at: " + hex(function_address).upper())
-            imm.updateLog()
             logJmpsOfFunction(function_address)
         else:
             None
@@ -139,43 +136,33 @@ def main(args):
     name=imm.getDebuggedName()
     module=imm.getModule(name)
     address=module.getEntry()
-    mod_size=module.getCodesize()
-    last_address = address+mod_size
 
-    x = 0
-    
-    imm.log("Starting search for call to main...")
-    imm.updateLog()
-    while(address < last_address): # we will loop forever (until the end of the executable) until we find the instruction "call X.Y", where X is the name of our process and Y is the address which the call jumps to. (e.g. call proj4.00401180)
+    # Step 1: Find the subroutine which calls main. In GCC the first instruction after the entry point with the format "call X.Y"
+    #         is always the the soubroutine which calls main. 
+    imm.log("Starting search for the call to the subroutine where the call to main is made ('pre-main')...")
+    while(1): # we will loop forever (until the end of the executable) until we find the instruction "call X.Y", where X is the name of our process and Y is the address which the call jumps to. (e.g. call proj4.00401180)
                   # If our opcode_string is not a call to pre-main, we increment our current address, which moves us to the next line and continue the loop.
         opcode = imm.disasm(address) # we get the numeric code for the instruction we are currently on (e.g. 2342342)
         opcode_str = opcode.getDisasm().lower() # we get the string representation of the instruction we are currently on (e.g. jmp esp)
         module = imm.findModule(address)[0].lower() # the module name is the name of the process we are debugging (e.g. proj4.exe)
-        #imm.log(opcode_str + " in module: " + module, address=address)
-        imm.updateLog()
-
-        # check to see if the line we are on is the call to main
-        #imm.log(formattedCall(module))
-        #imm.log(opcode_str)
+        # check to see if the line we are on is the call to pre-main
         if (formattedCall(module)) in opcode_str: # (i.e. if "call proj4" can be found in our opcode string). Extra explanation of string operations: if module = "proj4.exe" then module.split(".")[0] = "proj4"
-            imm.updateLog()
-            hex_address = opcode_str.split(".")[1] # hex address is everything to the right of the period
+            hex_address = opcode_str.split(".")[1] # hex address is everything to the right of the period in the instruction "call X.Y"
             address = int(hex_address, 16) # the opcode string saves the address in hex, so we need to convert it to decimal to use it
             imm.log(opcode_str + " located at: " + hex(address).upper())
             imm.log("============================================================")
             break
         else:
-            address += opcode.getOpSize() #otherwise increment the address by one instruction (we can use getOpSize() to calculate how much incrementing by one instruction actually is)
-        x += 1    
-            
-    i = 0
-    
-    while(address < last_address):
+            address += opcode.getOpSize() #otherwise increment the address by one instruction (we can use getOpSize() to calculate how much incrementing by one instruction actually is)  
+
+    # Step 2: find the call to main. The trick to finding main is finding the call to cexit. This is becauase in GCC cexit is always
+    #         called exactly 7 bytes after the call to main is made. Therefore the call to main is the address of cexit minus 7 bytes
+    imm.log("Starting search for the call to main... It will be the address of cexit minus 7 bytes")
+    while(1):
         opcode = imm.disasm(address) # we get the numeric code for the instruction we are currently on (e.g. 2342342)
         opcode_str = opcode.getDisasm()  # we get the string representation of the instruction we are currently on (e.g. jmp esp)
-        module = imm.findModule(address)[0].lower()
         if "cexit" in opcode_str.lower():
-            imm.log("Found cexit: ===============================================")
+            imm.log("Found cexit. ===============================================")
             imm.log("The call to main is located at:    " + hex(address-7))
             address = address-7 # In GCC (or at least we assume so) the call to main is always 7 bytes above the call to cexit. this is how we find main
             address = int(imm.disasm(address).getDisasm().split(".")[1], 16)
@@ -184,22 +171,21 @@ def main(args):
 
             
         address += opcode.getOpSize()
-        i += 1
 
-    # Step 3: starting from main, iterate through instructions, logging it if it is a jump. The loop ends when "cexit is called"
+    # Step 3: starting from main, iterate through instructions, logging the instruction if it is a conditional. The loop ends when "cexit is called"
+    #         We also look for function calls so we can log the jumps within the function as well
 
 
-    while(address < last_address):
+    while(1):
         opcode = imm.disasm(address) # we get the numeric code for the instruction we are currently on (e.g. 2342342)
         opcode_str = opcode.getDisasm()  # we get the string representation of the instruction we are currently on (e.g. jmp esp)
-        module = imm.findModule(address)[0].lower()
-        #imm.log("<=> " + opcode_str.lower() + " " + formattedCall(module))
-        if (formattedCall(module)) in opcode_str.lower():
-            function_hex_address = opcode_str.split(".")[1]
-            function_address = int(function_hex_address, 16)
+        ''' This 'if statement' looks for local functions that are called within main. If we find a function call, we jump to
+            the address where the function is located at so we can look for and set breakpoints at any conditionals in said function'''
+        if (formattedCall(module)) in opcode_str.lower(): # Within main, any instruction in the format "Call X.Y" is a local function.
+            function_hex_address = opcode_str.split(".")[1] # from "call test5.00401334", extract the "00401334" part and save it
+            function_address = int(function_hex_address, 16) # take our hex formatted 00401334 and convert it to a decimal formatted 4199220 so we can use it
             imm.log("function: " + opcode_str + " located at: " + hex(function_address).upper())
-            imm.updateLog()
-            logJmpsOfFunction(function_address)
+            logJmpsOfFunction(function_address) # this function is responsible for setting breakpoints in a function recursively
         if opcode_str[0] == "J":
             if opcode_str[0:3] != "JMP":
                 imm.setBreakpoint(address)
@@ -210,11 +196,11 @@ def main(args):
             imm.log("%10s" % hex(address).upper() + "   " + "%-35s" % opcode_str + "%10s" % module)
             break
         else:
-            None
+            # uncomment the line below to make the script write every instruction to the immunity log, regardless if it is a jump or not
             #imm.log("%10s" % hex(address).upper() + "   " + "%-35s" % opcode_str + "%10s" % module)
-            
+            None
         address += opcode.getOpSize()
-        i += 1
+
  
     #Finished setting breakpoints. The rest of the code are for automating analysis
     imm.run() #Get to the start of program
