@@ -1,6 +1,8 @@
 # Executable Trace Tool
 The goal of this project is to make the analysis of compiled program easier when the source code is not available. Analyzing compiled program is hard since the source code to assembly is not one-to-one translations. To help with the analysis of compiled program, our team creates a script that runs on Immunity Debugger to record and provide statistics on the conditional statements that are executed. This allows us to find out which conditional statements are executed for a specific program feature. Conditional statements are important part of a program and focusing on it makes it easier for us to figure out how certain program feature is implemented even without the original source. 
 
+This project is supervised under Professor Ian Harris. 
+
 Tools
 -----
 +   Immunity Debugger 
