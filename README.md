@@ -3,6 +3,10 @@ The goal of this project is to make the analysis of compiled program easier when
 
 *supervised under Professor Ian Harris. 
 
+Notes
+-----
+There is another team with the each objective, but they implemented finding the conditional statements in disassembly differently. Check out their github repository here: https://github.com/Reverse-Engineering-Team-UCI-diffver/Executable-Trace-Tool
+
 Tools
 -----
 +   Immunity Debugger 
