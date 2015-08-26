@@ -126,6 +126,7 @@ def main(args):
     '''
 
     #Initialization
+    setUpCalled = False
     rawFile = open('data.txt', 'w')
     processedFile = open('result.txt', 'w')
     statsFile = open('stats.txt', 'w')
@@ -155,7 +156,7 @@ def main(args):
             address = int(hex_address, 16) # the opcode string saves the address in hex, so we need to convert it to decimal to use it
             imm.log("call to pre-main: " + opcode_str + " located at: " + hex(address).upper())
             break
-        else:
+        else: 
             address += opcode.getOpSize() #otherwise increment the address by one instruction (we can use getOpSize() to calculate how much incrementing by one instruction actually is)  
 
     # Step 2: find the call to main. The trick to finding main is finding the call to cexit. This is becauase in GCC cexit is always
@@ -184,9 +185,12 @@ def main(args):
             the address where the function is located at so we can look for and set breakpoints at any conditionals in said function'''
         if (formattedCall(module)) in opcode_str.lower(): # Within main, any instruction in the format "Call X.Y" is a local function.
             function_hex_address = opcode_str.split(".")[1] # from "call test5.00401334", extract the "00401334" part and save it
+            imm.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! " + function_hex_address)
             function_address = int(function_hex_address, 16) # take our hex formatted 00401334 and convert it to a decimal formatted 4199220 so we can use it
             imm.log("function: " + opcode_str + " located at: " + hex(function_address).upper())
-            logJmpsOfFunction(function_address) # this function is responsible for setting breakpoints in a function recursively
+            if setUpCalled: #Inside main, there is a call to a function that is a part of setup, not a part of source code. 
+                logJmpsOfFunction(function_address) # this function is responsible for setting breakpoints in a function recursively
+            setUpCalled = True #after setup function is called, all the other function calls will be from the source code
         if opcode_str[0] == "J": # if the current instruction is a jump statement (all jump statements start with "J")
             if opcode_str[0:3] != "JMP": # we only put breakpoints at conditional jump statements, so JMP is not what we are looking for
                 imm.setBreakpoint(address)
@@ -200,9 +204,7 @@ def main(args):
         address += opcode.getOpSize()
     imm.log("==============Program finished breakpoints...==============")
 
-
- 
-    #Finished setting breakpoints. The rest of the code are for automating analysis
+    #Rest of the code are for automating analysis
     imm.run() #Get to the start of program
 
     #Populating the rawFile
