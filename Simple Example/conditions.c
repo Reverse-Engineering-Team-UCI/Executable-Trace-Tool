@@ -6,27 +6,27 @@ int main()
 	int b = 5; 
 	if(a == b)
 	{
-		printf("test\n");
+		printf("test equal\n");
 	}
 	else if(a > b)
 	{
-		printf("test\n");
+		printf("test greater\n");
 	}
 	else if(a < b)
 	{
-		printf("test\n");
+		printf("test less than\n");
 	}
 	else if(a <= b)
 	{
-		printf("test\n");
+		printf("test less than and equal\n");
 	}
 	else if(a >= b)
 	{
-		printf("test\n");
+		printf("test greater than and equal\n");
 	}
 	else if(a != b)
 	{
-		printf("test\n");
+		printf("test not equal\n");
 	}
 	
 	return 0;
