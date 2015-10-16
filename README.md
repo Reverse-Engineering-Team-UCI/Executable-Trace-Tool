@@ -5,7 +5,7 @@ The goal of this project is to make the analysis of compiled programs easier whe
 
 Notes
 -----
-There is another team with the same objective, but they implemented finding the jcc(jump conditional code) statements in disassembly differently. Our code is different in that it finds and sets breakpoints at all the jcc statements in the binaries, then dynamically checks the boolean values of the conditional statements. On the other hand, their code steps into each instruction in the binaries and if that instruction is a jcc statement, their code will record whether the instruction is true or false. Check out their github repository here: https://github.com/Reverse-Engineering-Team-UCI-diffver/Executable-Trace-Tool.
+Within our group, some of us decided to implement finding the jcc(jump conditional code) statements in disassembly differently. The code in this repository first finds and sets breakpoints at all the jcc statements in the binaries, then dynamically checks the boolean values of the conditional statements. On the other hand, their code steps into each instruction in the binaries and if that instruction is a jcc statement, their code will record whether the instruction is true or false. Check out their github repository here: https://github.com/Reverse-Engineering-Team-UCI-diffver/Executable-Trace-Tool.
 
 Tools
 -----
